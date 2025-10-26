@@ -2,52 +2,47 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <algorithm>
 
+/*
+ * Конструктор класса LogParser
+ *
+ * @param filename путь к файлу логов для анализа.
+ */
 LogParser::LogParser(const std::string& filename) : filename(filename) {
-    // Конструктор теперь просто сохраняет имя файла
 }
 
+/*
+ * Подсчет общего количества строк в файле
+ *
+ * @return количество строк в файле или -1 в случае ошибки.
+ */
 int LogParser::countLines() const {
-    std::ifstream file(filename);  // открываем файл для чтения
+    std::ifstream file(filename);
     
     if (!file.is_open()) {
         std::cerr << "Error: Cannot open file " << filename << std::endl;
-        return -1;  // возвращаем -1 при ошибке
+        return -1;
     }
     
     int count = 0;
     std::string line;
     
-    while (std::getline(file, line)) {  // читаем файл построчно
-        count++;  // увеличиваем счетчик для каждой строки
-    }
-    
-    file.close();  // закрываем файл
-    return count;  // возвращаем результат
-}
-
-std::vector<std::string> LogParser::search(const std::string& keyword) const {
-    std::vector<std::string> results;  // вектор для найденных строк
-    std::ifstream file(filename);      // открываем файл
-    
-    if (!file.is_open()) {
-        std::cerr << "Error: Cannot open file " << filename << std::endl;
-        return results;  // возвращаем пустой вектор при ошибке
-    }
-    
-    std::string line;
-    while (std::getline(file, line)) {  // читаем файл построчно
-        // Если ключевое слово найдено в строке
-        if (line.find(keyword) != std::string::npos) {
-            results.push_back(line);  // добавляем строку в результаты
-        }
+    while (std::getline(file, line)) {
+        count++;
     }
     
     file.close();
-    return results;
+    return count;
 }
 
-std::vector<std::string> LogParser::filterByLevel(const std::string& level) const {
+/*
+ * Поиск строк содержащих указанное ключевое слово
+ *
+ * @param keyword ключевое слово для поиска.
+ * @return вектор строк содержащих ключевое слово.
+ */
+std::vector<std::string> LogParser::search(const std::string& keyword) const {
     std::vector<std::string> results;
     std::ifstream file(filename);
     
@@ -58,9 +53,34 @@ std::vector<std::string> LogParser::filterByLevel(const std::string& level) cons
     
     std::string line;
     while (std::getline(file, line)) {
-        // Ищем уровень логгирования в строке
-        // Ищем паттерны типа "INFO:", "ERROR:", "WARN:"
-        std::string levelPattern = level + ":";
+        if (line.find(keyword) != std::string::npos) {
+            results.push_back(line);
+        }
+    }
+    
+    file.close();
+    return results;
+}
+
+/*
+ * Фильтрация записей лога по уровню логирования
+ *
+ * @param level уровень логирования (INFO, WARN, ERROR).
+ * @return вектор строк соответствующего уровня логирования.
+ */
+std::vector<std::string> LogParser::filterByLevel(const std::string& level) const {
+    std::vector<std::string> results;
+    std::ifstream file(filename);
+    
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open file " << filename << std::endl;
+        return results;
+    }
+    
+    std::string line;
+    std::string levelPattern = level + ":";
+    
+    while (std::getline(file, line)) {
         if (line.find(levelPattern) != std::string::npos) {
             results.push_back(line);
         }
@@ -70,6 +90,11 @@ std::vector<std::string> LogParser::filterByLevel(const std::string& level) cons
     return results;
 }
 
+/*
+ * Получение статистики по уровням логирования
+ *
+ * @return словарь с количеством записей для каждого уровня.
+ */
 std::map<std::string, int> LogParser::getLevelStats() const {
     std::map<std::string, int> stats = {{"INFO", 0}, {"WARN", 0}, {"ERROR", 0}};
     std::ifstream file(filename);
@@ -93,7 +118,9 @@ std::map<std::string, int> LogParser::getLevelStats() const {
     return stats;
 }
 
-// Новая функция: вывод сводки по файлу
+/*
+ * Вывод сводной информации по файлу логов
+ */
 void LogParser::printSummary() const {
     int totalLines = countLines();
     auto stats = getLevelStats();
@@ -109,4 +136,49 @@ void LogParser::printSummary() const {
     if (other > 0) {
         std::cout << "Other: " << other << " lines" << std::endl;
     }
+}
+
+/*
+ * Извлечение всех дат из записей лога
+ *
+ * @return вектор строк с датами в формате YYYY-MM-DD.
+ */
+std::vector<std::string> LogParser::extractAllDates() const {
+    std::vector<std::string> dates;
+    std::ifstream file(filename);
+    
+    if (!file.is_open()) return dates;
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.length() >= 10) {
+            std::string date = line.substr(0, 10);
+            if (date[4] == '-' && date[7] == '-') {
+                dates.push_back(date);
+            }
+        }
+    }
+    
+    file.close();
+    return dates;
+}
+
+/*
+ * Вывод статистики по временным меткам в логах
+ */
+void LogParser::printTimeStats() const {
+    auto dates = extractAllDates();
+    
+    if (dates.empty()) {
+        std::cout << "No valid dates found in log file" << std::endl;
+        return;
+    }
+    
+    std::string minDate = *std::min_element(dates.begin(), dates.end());
+    std::string maxDate = *std::max_element(dates.begin(), dates.end());
+    
+    std::cout << "=== Time Statistics ===" << std::endl;
+    std::cout << "Earliest date: " << minDate << std::endl;
+    std::cout << "Latest date:   " << maxDate << std::endl;
+    std::cout << "Period:        " << minDate << " to " << maxDate << std::endl;
 }

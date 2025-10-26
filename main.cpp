@@ -9,6 +9,9 @@
 #define COLOR_BLUE    "\033[34m"
 #define COLOR_RESET   "\033[0m"
 
+/*
+ * Вывод справки по использованию программы
+ */
 void printUsage() {
     std::cout << "Usage: ./log_parser <file.log> <command> [argument]\n";
     std::cout << "Commands:\n";
@@ -16,8 +19,14 @@ void printUsage() {
     std::cout << "  --search <keyword>         Search for keyword\n";
     std::cout << "  --level <INFO|WARN|ERROR>  Filter by log level\n";
     std::cout << "  --summary                  Show file summary with statistics\n";
+    std::cout << "  --timestats                Show time statistics\n";
 }
 
+/*
+ * Вывод строки лога с цветовым оформлением в зависимости от уровня
+ *
+ * @param line строка лога для вывода.
+ */
 void printColoredLevel(const std::string& line) {
     if (line.find("ERROR:") != std::string::npos) {
         std::cout << COLOR_RED << line << COLOR_RESET << std::endl;
@@ -30,6 +39,14 @@ void printColoredLevel(const std::string& line) {
     }
 }
 
+/*
+ * Главная функция программы - обработка аргументов командной строки
+ * и выполнение соответствующих команд
+ *
+ * @param argc количество аргументов командной строки.
+ * @param argv массив аргументов командной строки.
+ * @return код завершения программы (0 - успех, 1 - ошибка).
+ */
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << COLOR_RED << "Error: Too few arguments!" << COLOR_RESET << std::endl;
@@ -81,6 +98,9 @@ int main(int argc, char* argv[]) {
     }
     else if (command == "--summary") {
         parser.printSummary();
+    }
+    else if (command == "--timestats") {
+        parser.printTimeStats();
     }
     else {
         std::cerr << COLOR_RED << "Unknown command: " << command << COLOR_RESET << std::endl;
